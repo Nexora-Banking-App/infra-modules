@@ -35,11 +35,45 @@ resource "aws_security_group" "db_sg" {
     Environment = var.environment
   }
 }
-# 3. Cryptographically Random Master Password
+# 3. Cryptographically Random Passwords & Platform Keys
 resource "random_password" "db_password" {
   length           = 24
   special          = true
   override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+resource "random_password" "jwt_secret" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "internal_service_secret" {
+  length  = 32
+  special = false
+}
+
+# 4. Store ALL Credentials in AWS Secrets Manager (Zero Secrets in Git!)
+resource "aws_secretsmanager_secret" "db_credentials" {
+  name                    = "nexora/${var.environment}/db-credentials"
+  recovery_window_in_days = 0
+
+  tags = {
+    Environment = var.environment
+    Project     = "NexoraPlatform"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "db_credentials_val" {
+  secret_id = aws_secretsmanager_secret.db_credentials.id
+  secret_string = jsonencode({
+    DB_HOST                 = aws_db_instance.this.address
+    DB_PORT                 = "3306"
+    DB_USER                 = "dbadmin"
+    DB_PASSWORD             = random_password.db_password.result
+    DB_NAME                 = var.database_name
+    JWT_SECRET              = random_password.jwt_secret.result
+    INTERNAL_SERVICE_SECRET = random_password.internal_service_secret.result
+  })
 }
 
 # 4. Store Credentials in AWS Secrets Manager for GitOps (ESO) Consumption
