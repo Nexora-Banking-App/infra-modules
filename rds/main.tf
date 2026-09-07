@@ -89,7 +89,7 @@ resource "aws_db_instance" "this" {
   multi_az = var.multi_az
 
   # Backup & PITR Retention (Crucial for our DR demonstration)
-  backup_retention_period = 7
+  backup_retention_period = var.backup_retention_period
   backup_window           = "03:00-04:00"
   maintenance_window      = "Sun:04:30-Sun:05:30"
 

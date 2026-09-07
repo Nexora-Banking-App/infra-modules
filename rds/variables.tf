@@ -47,3 +47,8 @@ variable "database_name" {
   type        = string
   default     = "nexora_bank"
 }
+variable "backup_retention_period" {
+  description = "Days to retain backups (Use 1 for Free Tier/Staging, 7 for Prod)"
+  type        = number
+  default     = 1
+}

@@ -16,20 +16,21 @@ module "eks" {
   # Critical for IRSA (IAM Roles for Service Accounts)
   enable_irsa = true
 
-  # Enterprise Node Group Configuration
+# Enterprise Node Group Configuration
   eks_managed_node_groups = {
     core_nodes = {
       name         = "${var.cluster_name}-core"
       instance_types = var.node_instance_types
 
+      # Required for EKS 1.30+ (Amazon Linux 2023)
+      ami_type     = "AL2023_x86_64_STANDARD"
+
       min_size     = var.min_size
       max_size     = var.max_size
       desired_size = var.desired_size
 
-      # Subnets where worker nodes will run (Strictly Private)
       subnet_ids   = var.subnet_ids
 
-      # Node security: attach basic policies
       iam_role_additional_policies = {
         AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
       }
