@@ -47,10 +47,12 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
 
-  # Grants your AWS Console user full admin access to view pods and nodes
+  # Grants specific users full admin access to the Kubernetes cluster
   access_entries = {
+    
+    # User 1: For viewing the cluster visually in the AWS Console
     console_admin = {
-      principal_arn = "arn:aws:iam::800770414458:root"
+      principal_arn = "arn:aws:iam::800770414458:user/ahmedkhater2611"
       policy_associations = {
         admin = {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -60,11 +62,19 @@ module "eks" {
         }
       }
     }
-  }
 
-  tags = {
-    Environment = var.environment
-    Project     = "NexoraPlatform"
-    ManagedBy   = "Terraform"
+    # User 2: For running 'kubectl' from your laptop terminal
+    cli_admin = {
+      principal_arn = "arn:aws:iam::800770414458:user/ahmeddhussain"
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+
   }
 }
