@@ -9,18 +9,18 @@ resource "aws_db_subnet_group" "this" {
   }
 }
 
-# 2. Database Firewall (Only permits incoming traffic from EKS)
+# 2. Database Firewall (Allows MySQL from private VPC nodes & pods)
 resource "aws_security_group" "db_sg" {
   name        = "nexora-${var.environment}-db-sg"
-  description = "Allow inbound MySQL traffic exclusively from EKS"
+  description = "Allow inbound MySQL traffic from internal VPC"
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "MySQL from EKS nodes"
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [var.eks_security_group_id]
+    description = "MySQL from private subnets"
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"] # <-- Allows all worker nodes in the VPC to connect!
   }
 
   egress {
@@ -98,32 +98,6 @@ resource "aws_db_instance" "this" {
 
   tags = {
     Name        = "nexora-${var.environment}-mysql"
-    Environment = var.environment
-  }
-}
-# 2. Database Firewall (Allows MySQL from private VPC nodes & pods)
-resource "aws_security_group" "db_sg" {
-  name        = "nexora-${var.environment}-db-sg"
-  description = "Allow inbound MySQL traffic from internal VPC"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    description = "MySQL from private subnets"
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"] # <-- Allows all worker nodes in the VPC to connect!
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "nexora-${var.environment}-db-sg"
     Environment = var.environment
   }
 }
