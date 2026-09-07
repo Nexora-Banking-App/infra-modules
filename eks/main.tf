@@ -48,11 +48,12 @@ module "eks" {
   enable_cluster_creator_admin_permissions = true
 
   # Grants specific users full admin access to the Kubernetes cluster
+# Grants specific users full admin access to the Kubernetes cluster
   access_entries = {
     
-    # User 1: For viewing the cluster visually in the AWS Console
+    # Console Admin (Root Account Access)
     console_admin = {
-      principal_arn = "arn:aws:iam::800770414458:user/ahmedkhater2611"
+      principal_arn = "arn:aws:iam::800770414458:root"
       policy_associations = {
         admin = {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -63,7 +64,7 @@ module "eks" {
       }
     }
 
-    # User 2: For running 'kubectl' from your laptop terminal
+    # Laptop/CLI Admin (Your IAM User)
     cli_admin = {
       principal_arn = "arn:aws:iam::800770414458:user/ahmeddhussain"
       policy_associations = {
@@ -77,4 +78,6 @@ module "eks" {
     }
 
   }
+
+  
 }
