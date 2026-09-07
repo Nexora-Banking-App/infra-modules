@@ -76,28 +76,6 @@ resource "aws_secretsmanager_secret_version" "db_credentials_val" {
   })
 }
 
-# 4. Store Credentials in AWS Secrets Manager for GitOps (ESO) Consumption
-resource "aws_secretsmanager_secret" "db_credentials" {
-  name                    = "nexora/${var.environment}/db-credentials"
-  recovery_window_in_days = 0 # Forces immediate deletion if destroyed during demos
-
-  tags = {
-    Environment = var.environment
-    Project     = "NexoraPlatform"
-  }
-}
-
-resource "aws_secretsmanager_secret_version" "db_credentials_val" {
-  secret_id = aws_secretsmanager_secret.db_credentials.id
-  secret_string = jsonencode({
-    DB_HOST     = aws_db_instance.this.address
-    DB_PORT     = "3306"
-    DB_USER     = "dbadmin"
-    DB_PASSWORD = random_password.db_password.result
-    DB_NAME     = var.database_name
-  })
-}
-
 # 5. The RDS MySQL Engine Instance
 resource "aws_db_instance" "this" {
   identifier = "nexora-${var.environment}-mysql"
