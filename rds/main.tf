@@ -101,3 +101,29 @@ resource "aws_db_instance" "this" {
     Environment = var.environment
   }
 }
+# 2. Database Firewall (Allows MySQL from private VPC nodes & pods)
+resource "aws_security_group" "db_sg" {
+  name        = "nexora-${var.environment}-db-sg"
+  description = "Allow inbound MySQL traffic from internal VPC"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "MySQL from private subnets"
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"] # <-- Allows all worker nodes in the VPC to connect!
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "nexora-${var.environment}-db-sg"
+    Environment = var.environment
+  }
+}
