@@ -5,7 +5,6 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
 
-  # Security: API access configuration
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
 
@@ -15,14 +14,24 @@ module "eks" {
 
   enable_irsa = true
 
-  # CRITICAL: Install required networking add-ons so nodes become 'Ready' immediately!
   cluster_addons = {
-    coredns = {}
+    coredns    = {}
     kube-proxy = {}
-    vpc-cni = {}
+    vpc-cni    = {}
   }
 
-  # Node Group Configuration (Amazon Linux 2023 on EKS 1.31)
+  # CRITICAL SECURITY RULE: Allow EKS Control Plane to reach Istio Webhook on port 15017!
+  node_security_group_additional_rules = {
+    ingress_cluster_istiod_webhook = {
+      description                   = "Cluster control plane to node Istiod webhook port"
+      protocol                      = "tcp"
+      from_port                     = 15017
+      to_port                       = 15017
+      type                          = "ingress"
+      source_cluster_security_group = true
+    }
+  }
+
   eks_managed_node_groups = {
     core_nodes = {
       name           = "${var.cluster_name}-core"
@@ -47,11 +56,7 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
 
-  # Grants specific users full admin access to the Kubernetes cluster
-# Grants specific users full admin access to the Kubernetes cluster
   access_entries = {
-    
-    # Console Admin (Root Account Access)
     console_admin = {
       principal_arn = "arn:aws:iam::800770414458:root"
       policy_associations = {
@@ -63,8 +68,6 @@ module "eks" {
         }
       }
     }
-
-    # Laptop/CLI Admin (Your IAM User)
     cli_admin = {
       principal_arn = "arn:aws:iam::800770414458:user/ahmeddhussain"
       policy_associations = {
@@ -76,8 +79,11 @@ module "eks" {
         }
       }
     }
-
   }
 
-  
+  tags = {
+    Environment = var.environment
+    Project     = "NexoraPlatform"
+    ManagedBy   = "Terraform"
+  }
 }
