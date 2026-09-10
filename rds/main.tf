@@ -22,7 +22,13 @@ ingress {
     protocol        = "tcp"
     security_groups = [var.eks_security_group_id] 
   }
-
+ingress {
+    description = "MySQL from private VPC"
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
   egress {
     from_port   = 0
     to_port     = 0
