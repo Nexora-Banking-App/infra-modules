@@ -15,12 +15,12 @@ resource "aws_security_group" "db_sg" {
   description = "Allow inbound MySQL traffic exclusively from EKS" # <-- Keep original text!
   vpc_id      = var.vpc_id
 
-  ingress {
-    description = "MySQL from private subnets"
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"] 
+ingress {
+    description     = "MySQL from EKS Worker Nodes"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [var.eks_security_group_id] 
   }
 
   egress {
