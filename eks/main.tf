@@ -30,6 +30,16 @@ module "eks" {
       type                          = "ingress"
       source_cluster_security_group = true
     }
+
+    # CRITICAL: Allow AWS Load Balancer to reach services on NodePorts!
+    ingress_nodeports = {
+      description = "Allow AWS Load Balancer ingress on NodePort range"
+      protocol    = "tcp"
+      from_port   = 30000
+      to_port     = 32767
+      type        = "ingress"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   eks_managed_node_groups = {
@@ -42,7 +52,7 @@ module "eks" {
       max_size     = var.max_size
       desired_size = var.desired_size
 
-      subnet_ids   = var.subnet_ids
+      subnet_ids = var.subnet_ids
 
       iam_role_additional_policies = {
         AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
