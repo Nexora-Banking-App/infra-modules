@@ -51,6 +51,11 @@ resource "random_password" "internal_service_secret" {
   special = false
 }
 
+resource "random_password" "grafana_password" {
+  length  = 16
+  special = false # Grafana passwords are safer without special characters
+}
+
 # 4. Store ALL Credentials in AWS Secrets Manager (Zero Secrets in Git!)
 resource "aws_secretsmanager_secret" "db_credentials" {
   name                    = "nexora/${var.environment}/db-credentials"
@@ -72,6 +77,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials_val" {
     DB_NAME                 = var.database_name
     JWT_SECRET              = random_password.jwt_secret.result
     INTERNAL_SERVICE_SECRET = random_password.internal_service_secret.result
+    GRAFANA_ADMIN_PASSWORD  = random_password.grafana_password.result # <-- Added for Grafana!
   })
 }
 
