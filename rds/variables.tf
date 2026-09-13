@@ -16,7 +16,7 @@ variable "subnet_ids" {
 variable "eks_security_group_id" {
   description = "Security group ID of the EKS cluster permitted to connect to MySQL"
   type        = string
-  default     = "" 
+  default     = ""
 }
 
 variable "instance_class" {
