@@ -18,6 +18,9 @@ module "eks" {
     coredns    = {}
     kube-proxy = {}
     vpc-cni    = {}
+    aws-ebs-csi-driver = {
+      service_account_role_arn = module.ebs_csi_irsa_role.iam_role_arn
+    }
   }
 
   # CRITICAL SECURITY RULE: Allow EKS Control Plane to reach Istio Webhook on port 15017!
@@ -95,5 +98,21 @@ module "eks" {
     Environment = var.environment
     Project     = "NexoraPlatform"
     ManagedBy   = "Terraform"
+  }
+}
+
+# IAM Role for AWS EBS CSI Driver
+module "ebs_csi_irsa_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.39.0"
+
+  role_name             = "${var.cluster_name}-ebs-csi"
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    ex = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
   }
 }
