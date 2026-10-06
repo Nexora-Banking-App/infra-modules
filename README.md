@@ -27,11 +27,12 @@ This repository acts as the **Blueprint Factory** for the Nexora Enterprise Plat
 ## Table of Contents
 
 1. [Architectural Philosophy](#architectural-philosophy)
-2. [Module Specifications](#module-specifications)
-3. [Security & IAM Architecture](#security--iam-architecture)
-4. [Integration with GitOps (ESO)](#integration-with-gitops-eso)
-5. [Real-World Troubleshooting & Solutions](#real-world-troubleshooting--solutions)
-6. [Known Gaps & Open Items](#known-gaps--open-items)
+2. [Current Staging Module Inputs](#current-staging-module-inputs)
+3. [Module Specifications](#module-specifications)
+4. [Security & IAM Architecture](#security--iam-architecture)
+5. [Integration with GitOps (ESO)](#integration-with-gitops-eso)
+6. [Real-World Troubleshooting & Solutions](#real-world-troubleshooting--solutions)
+7. [Known Gaps & Open Items](#known-gaps--open-items)
 
 ---
 
@@ -40,6 +41,21 @@ This repository acts as the **Blueprint Factory** for the Nexora Enterprise Plat
 In the Nexora platform, this repository contains **zero state**. 
 
 It does not know what "staging" or "prod" is. It exposes input variables (e.g., `multi_az`, `desired_size`, `instance_class`) that the `infra-live` repository injects at execution time. This enforces the **DRY (Don't Repeat Yourself)** principle and strictly isolates the blast radius: engineers can test infrastructure changes on branch builds without risking configuration drift in production environments.
+
+## Current Staging Module Inputs
+
+The live staging environment was verified **2026-10-06**. `infra-live/staging`
+currently invokes these modules with:
+
+| Module | Staging inputs / behavior |
+|---|---|
+| EKS | Kubernetes `1.33`; two `m7i-flex.large` workers (min 1, max 3); AL2023; private worker subnets |
+| EKS add-ons | `vpc-cni`, `kube-proxy`, `coredns`, and AWS EBS CSI driver with IRSA |
+| RDS | MySQL 8.0, `db.t3.micro`, Single-AZ, one-day backup retention |
+| Secrets | Database and application credentials are generated into AWS Secrets Manager by the live configuration |
+
+The live cluster reports Kubernetes `v1.33.13-eks-3b4a6ca`. These values describe
+staging and are not module defaults or claims about production.
 
 ---
 
@@ -55,7 +71,7 @@ Wraps the official AWS VPC module to construct a rigid, multi-AZ network foundat
 Provisions the Kubernetes v1.33 control plane and managed node groups using Amazon Linux 2023 (AL2023).
 * **Cluster OIDC Federation (IRSA):** Automatically provisions a dedicated IAM OIDC Provider for the EKS cluster itself. *(Note: This is a separate trust boundary from the GitHub Actions CI/CD OIDC provider defined in `infra-live`)*. This enables Kubernetes pods to assume AWS IAM roles.
 * **Access Entries:** Replaces the deprecated `aws-auth` ConfigMap. Uses AWS EKS Access Entries to grant deterministic cluster-admin rights to both the AWS Console role and the CLI deployment role.
-* **Explicit Addons:** Explicitly manages `vpc-cni`, `kube-proxy`, and `coredns` to prevent node bootstrapping deadlocks.
+* **Explicit Addons:** Manages `vpc-cni`, `kube-proxy`, `coredns`, and the AWS EBS CSI driver. EBS CSI receives its IAM permissions through a dedicated IRSA role.
 
 ### 3. RDS Module (`/rds`)
 Provisions the MySQL 8.0 database backing the transactional ledger.
@@ -113,5 +129,4 @@ This module code reflects several explicit fixes required to bypass undocumented
 
 In the interest of accurate architectural documentation, the following limitations are acknowledged in the current module definitions:
 
-* **EBS CSI Driver Omission:** The EKS module currently does not provision the AWS EBS CSI Driver addon or its associated IRSA role. Consequently, stateful workloads (like Prometheus) must run in-memory (`emptyDir`), which results in metric data loss upon pod restarts. Adding this driver is a required prerequisite before moving observability metrics to durable storage.
 * **VPC CIDR vs. SG ID for RDS Firewall:** The RDS security group currently allows inbound traffic from the entire VPC CIDR (`10.0.0.0/16`) rather than referencing the specific EKS Node Security Group ID. While this resolves a cyclic dependency/timing issue during cluster bootstrapping, it slightly broadens the internal network trust boundary. At production scale, this ingress rule should be tightened to accept traffic solely from the EKS worker node security group.
