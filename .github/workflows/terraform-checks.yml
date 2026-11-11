@@ -1,0 +1,42 @@
+name: "Terraform - PR checks"
+
+# Static checks only: no AWS credentials are used.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tf-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt:
+    name: "terraform fmt"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+      - run: terraform fmt -check -recursive
+
+  validate:
+    name: "terraform validate (${{ matrix.module }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [vpc, eks, rds]
+    defaults:
+      run:
+        working-directory: ./${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
