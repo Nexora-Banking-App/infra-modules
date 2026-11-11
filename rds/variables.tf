@@ -53,3 +53,27 @@ variable "backup_retention_period" {
   type        = number
   default     = 1
 }
+
+variable "vpc_cidr" {
+  description = "CIDR of the VPC. MySQL (3306) is reachable from this range only"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "deletion_protection" {
+  description = "Block deletion of the database instance. Set true for production"
+  type        = bool
+  default     = false
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip the final snapshot when the instance is deleted. Set false for production"
+  type        = bool
+  default     = true
+}
+
+variable "secret_recovery_window_in_days" {
+  description = "Days a deleted Secrets Manager secret can still be restored (0 = delete immediately, 7-30 for production)"
+  type        = number
+  default     = 0
+}

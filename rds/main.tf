@@ -11,8 +11,10 @@ resource "aws_db_subnet_group" "this" {
 
 # 2. Database Firewall (Updates rules in-place without recreation)
 resource "aws_security_group" "db_sg" {
-  name        = "nexora-${var.environment}-db-sg"
-  description = "Allow inbound MySQL traffic exclusively from EKS" # <-- Keep original text!
+  name = "nexora-${var.environment}-db-sg"
+  # Changing this description forces AWS to replace the security group, which
+  # fails while the database uses it. Leave the text as it is.
+  description = "Allow inbound MySQL traffic exclusively from EKS"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -20,7 +22,7 @@ resource "aws_security_group" "db_sg" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]
+    cidr_blocks = [var.vpc_cidr]
   }
   egress {
     from_port   = 0
@@ -59,7 +61,7 @@ resource "random_password" "grafana_password" {
 # 4. Store ALL Credentials in AWS Secrets Manager (Zero Secrets in Git!)
 resource "aws_secretsmanager_secret" "db_credentials" {
   name                    = "nexora/${var.environment}/db-credentials"
-  recovery_window_in_days = 0
+  recovery_window_in_days = var.secret_recovery_window_in_days
 
   tags = {
     Environment = var.environment
@@ -77,7 +79,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials_val" {
     DB_NAME                 = var.database_name
     JWT_SECRET              = random_password.jwt_secret.result
     INTERNAL_SERVICE_SECRET = random_password.internal_service_secret.result
-    GRAFANA_ADMIN_PASSWORD  = random_password.grafana_password.result # <-- Added for Grafana!
+    GRAFANA_ADMIN_PASSWORD  = random_password.grafana_password.result
   })
 }
 
@@ -109,8 +111,11 @@ resource "aws_db_instance" "this" {
   backup_window           = "03:00-04:00"
   maintenance_window      = "Sun:04:30-Sun:05:30"
 
-  skip_final_snapshot = true
-  deletion_protection = false
+  # Safe-by-configuration: staging keeps the throwaway defaults, prod turns
+  # deletion protection on and takes a final snapshot.
+  skip_final_snapshot       = var.skip_final_snapshot
+  final_snapshot_identifier = var.skip_final_snapshot ? null : "nexora-${var.environment}-mysql-final"
+  deletion_protection       = var.deletion_protection
 
   tags = {
     Name        = "nexora-${var.environment}-mysql"

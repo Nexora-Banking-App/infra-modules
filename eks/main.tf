@@ -5,8 +5,9 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
 
-  cluster_endpoint_public_access  = true
-  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access       = true
+  cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
+  cluster_endpoint_private_access      = true
 
   vpc_id                   = var.vpc_id
   subnet_ids               = var.subnet_ids
@@ -17,13 +18,17 @@ module "eks" {
   cluster_addons = {
     coredns    = {}
     kube-proxy = {}
-    vpc-cni    = {}
+    vpc-cni = {
+      # With enableNetworkPolicy the VPC CNI enforces Kubernetes NetworkPolicies.
+      # Without it the policies in platform-config are accepted but block nothing.
+      configuration_values = var.enable_network_policy ? jsonencode({ enableNetworkPolicy = "true" }) : null
+    }
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_irsa_role.iam_role_arn
     }
   }
 
-  # CRITICAL SECURITY RULE: Allow EKS Control Plane to reach Istio Webhook on port 15017!
+  # The control plane must reach the Istio sidecar-injection webhook on the nodes (15017)
   node_security_group_additional_rules = {
     ingress_cluster_istiod_webhook = {
       description                   = "Cluster control plane to node Istiod webhook port"

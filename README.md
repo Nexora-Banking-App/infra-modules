@@ -64,7 +64,7 @@ staging and are not module defaults or claims about production.
 ### 1. VPC Module (`/vpc`)
 Wraps the official AWS VPC module to construct a rigid, multi-AZ network foundation.
 * **Network Isolation:** Enforces strict Public/Private subnet boundaries. EKS worker nodes and RDS databases are deployed exclusively into private subnets.
-* **Egress Routing:** Single NAT Gateway configured for private subnet outbound internet access (e.g., pulling external container images).
+* **Egress Routing:** One shared NAT Gateway by default (`single_nat_gateway = true`, cheaper). Set it to `false` for one NAT Gateway per availability zone.
 * **Controller Tagging:** Automatically injects `kubernetes.io/role/elb=1` and `kubernetes.io/role/internal-elb=1` tags, which are hard requirements for the AWS Load Balancer Controller to discover subnets.
 
 ### 2. EKS Module (`/eks`)
@@ -78,6 +78,7 @@ Provisions the Kubernetes control plane and managed node groups using Amazon Lin
 Provisions the MySQL 8.0 database backing the transactional ledger.
 * **Dynamic Sizing:** Accepts `multi_az = true/false` to seamlessly toggle between a cost-optimized Single-AZ staging database and a synchronous, RPO=0 Multi-AZ production database.
 * **Network Firewalling:** Restricts inbound port 3306 traffic strictly to the internal VPC CIDR block (`10.0.0.0/16`), rejecting all external routing attempts.
+* **Safe-by-configuration deletes:** `deletion_protection`, `skip_final_snapshot` and `secret_recovery_window_in_days` are inputs. The defaults suit a disposable staging database; the prod configuration turns protection on, takes a final snapshot and keeps deleted secrets restorable for 7 days.
 * **Automated Secrets:** Generates cryptographically random database passwords and application keys directly within the AWS provider, passing them natively to AWS Secrets Manager.
 
 ---
@@ -130,5 +131,7 @@ This module code reflects several explicit fixes required to bypass undocumented
 
 In the interest of accurate architectural documentation, the following limitations are acknowledged in the current module definitions:
 
+* **NetworkPolicy enforcement is off by default:** the EKS module only enables the VPC CNI network policy agent when `enable_network_policy = true`. Until an environment sets it, the NetworkPolicies in `platform-config` are accepted by the API server but do not block traffic. Turn it on in staging first and watch the workloads.
+* **Public API endpoint:** `cluster_endpoint_public_access_cidrs` defaults to `0.0.0.0/0`. Narrow it to office or VPN ranges for production.
 * **NodePort rule not verified on a live cluster:** the restriction to the VPC CIDR relies on the AWS Load Balancer Controller adding its own rule for the NLB. Confirm public access to the gateway after the next apply; if it fails, the controller is not managing the rule and the NLB needs a dedicated security group.
 * **VPC CIDR vs. SG ID for RDS Firewall:** The RDS security group currently allows inbound traffic from the entire VPC CIDR (`10.0.0.0/16`) rather than referencing the specific EKS Node Security Group ID. While this resolves a cyclic dependency/timing issue during cluster bootstrapping, it slightly broadens the internal network trust boundary. At production scale, this ingress rule should be tightened to accept traffic solely from the EKS worker node security group.

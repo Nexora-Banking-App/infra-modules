@@ -53,3 +53,15 @@ variable "vpc_cidr" {
   type        = string
   default     = "10.0.0.0/16"
 }
+
+variable "cluster_endpoint_public_access_cidrs" {
+  description = "CIDR blocks allowed to reach the public Kubernetes API endpoint. Narrow this to office/VPN ranges for production"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "enable_network_policy" {
+  description = "Enforce Kubernetes NetworkPolicies with the VPC CNI. Off by default: turning it on makes the default-deny policy in platform-config take effect, so test in staging first"
+  type        = bool
+  default     = false
+}

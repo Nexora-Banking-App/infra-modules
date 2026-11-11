@@ -1,4 +1,4 @@
-# We use the official AWS VPC module to ensure enterprise best practices
+# Wraps the official AWS VPC module
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.5.1"
@@ -11,9 +11,11 @@ module "vpc" {
   public_subnets  = var.public_subnets
 
   # Enterprise Security: Private subnets must route to the internet via a NAT Gateway
+  # One shared NAT gateway is cheaper but is a single point of failure for all
+  # outbound traffic. Set single_nat_gateway = false for one NAT gateway per AZ.
   enable_nat_gateway     = true
-  single_nat_gateway     = true # Set to true to save AWS costs for this demo. In prod, use false.
-  one_nat_gateway_per_az = false
+  single_nat_gateway     = var.single_nat_gateway
+  one_nat_gateway_per_az = !var.single_nat_gateway
 
   # Required for EKS cluster DNS resolution
   enable_dns_hostnames = true
