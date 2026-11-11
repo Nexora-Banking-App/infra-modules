@@ -68,9 +68,10 @@ Wraps the official AWS VPC module to construct a rigid, multi-AZ network foundat
 * **Controller Tagging:** Automatically injects `kubernetes.io/role/elb=1` and `kubernetes.io/role/internal-elb=1` tags, which are hard requirements for the AWS Load Balancer Controller to discover subnets.
 
 ### 2. EKS Module (`/eks`)
-Provisions the Kubernetes v1.33 control plane and managed node groups using Amazon Linux 2023 (AL2023).
+Provisions the Kubernetes control plane and managed node groups using Amazon Linux 2023 (AL2023). The version is an input: staging passes `1.33`, the prod configuration passes `1.31`. Always pass `cluster_version` explicitly; the variable's default is only a fallback.
 * **Cluster OIDC Federation (IRSA):** Automatically provisions a dedicated IAM OIDC Provider for the EKS cluster itself. *(Note: This is a separate trust boundary from the GitHub Actions CI/CD OIDC provider defined in `infra-live`)*. This enables Kubernetes pods to assume AWS IAM roles.
 * **Access Entries:** Replaces the deprecated `aws-auth` ConfigMap. Uses AWS EKS Access Entries to grant deterministic cluster-admin rights to both the AWS Console role and the CLI deployment role.
+* **NodePort ingress limited to the VPC:** the node security group opens the NodePort range (30000-32767) to `var.vpc_cidr` (default `10.0.0.0/16`) instead of `0.0.0.0/0`. Internet traffic reaches the Istio gateway through the NLB, whose security-group rule on the nodes is managed by the AWS Load Balancer Controller.
 * **Explicit Addons:** Manages `vpc-cni`, `kube-proxy`, `coredns`, and the AWS EBS CSI driver. EBS CSI receives its IAM permissions through a dedicated IRSA role.
 
 ### 3. RDS Module (`/rds`)
@@ -129,4 +130,5 @@ This module code reflects several explicit fixes required to bypass undocumented
 
 In the interest of accurate architectural documentation, the following limitations are acknowledged in the current module definitions:
 
+* **NodePort rule not verified on a live cluster:** the restriction to the VPC CIDR relies on the AWS Load Balancer Controller adding its own rule for the NLB. Confirm public access to the gateway after the next apply; if it fails, the controller is not managing the rule and the NLB needs a dedicated security group.
 * **VPC CIDR vs. SG ID for RDS Firewall:** The RDS security group currently allows inbound traffic from the entire VPC CIDR (`10.0.0.0/16`) rather than referencing the specific EKS Node Security Group ID. While this resolves a cyclic dependency/timing issue during cluster bootstrapping, it slightly broadens the internal network trust boundary. At production scale, this ingress rule should be tightened to accept traffic solely from the EKS worker node security group.
