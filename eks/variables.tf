@@ -47,3 +47,9 @@ variable "desired_size" {
   type        = number
   default     = 2
 }
+
+variable "vpc_cidr" {
+  description = "CIDR of the VPC. NodePort ingress on the worker nodes is limited to this range"
+  type        = string
+  default     = "10.0.0.0/16"
+}

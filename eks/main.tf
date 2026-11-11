@@ -34,14 +34,19 @@ module "eks" {
       source_cluster_security_group = true
     }
 
-    # CRITICAL: Allow AWS Load Balancer to reach services on NodePorts!
+    # NodePort range, reachable from inside the VPC only (was 0.0.0.0/0).
+    # This covers load balancer health checks and traffic that originates in the
+    # VPC. Internet clients reach the Istio gateway through the NLB that the AWS
+    # Load Balancer Controller creates: the controller attaches its own security
+    # group to the NLB and adds a matching rule to this node security group, so
+    # no world-open rule is needed here.
     ingress_nodeports = {
-      description = "Allow AWS Load Balancer ingress on NodePort range"
+      description = "NodePort range from inside the VPC"
       protocol    = "tcp"
       from_port   = 30000
       to_port     = 32767
       type        = "ingress"
-      cidr_blocks = ["0.0.0.0/0"]
+      cidr_blocks = [var.vpc_cidr]
     }
   }
 
