@@ -1,6 +1,3 @@
-
-***
-
 <div align="center">
 
 # Nexora Core Banking: Infrastructure Modules
