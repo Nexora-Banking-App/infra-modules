@@ -21,6 +21,20 @@ This repository acts as the **Blueprint Factory** for the Nexora Enterprise Plat
 
 ---
 
+## At a Glance
+
+**What this repository is:** three reusable Terraform modules. They hold no state and know nothing about a specific environment; `infra-live` calls them with inputs.
+
+| Module | Creates | Main inputs |
+|---|---|---|
+| `vpc/` | VPC, public and private subnets in three AZs, NAT, subnet tags for load balancers | `environment`, `vpc_cidr`, `public_subnets`, `private_subnets`, `single_nat_gateway` |
+| `eks/` | EKS cluster, managed node group, core add-ons, EBS CSI role, access entries, node security-group rules | `cluster_name`, `cluster_version`, `vpc_id`, `subnet_ids`, node sizing, `vpc_cidr`, `enable_network_policy`, `cluster_endpoint_public_access_cidrs` |
+| `rds/` | MySQL 8.0 instance, subnet group, security group, generated credentials in Secrets Manager | `environment`, `vpc_id`, `subnet_ids`, `instance_class`, `multi_az`, `backup_retention_period`, `deletion_protection`, `skip_final_snapshot`, `secret_recovery_window_in_days` |
+
+Every input added after the first release has a default that leaves existing environments unchanged. Pull requests run `terraform fmt` and `terraform validate` on each module.
+
+---
+
 ## Table of Contents
 
 1. [Architectural Philosophy](#architectural-philosophy)
